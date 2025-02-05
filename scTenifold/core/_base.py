@@ -440,6 +440,7 @@ class scTenifoldKnk(scBase):
             ko_method=self.ko_method,
             strict_lambda=self.strict_lambda,
             ko_genes=self.ko_genes,
+            # **kwargs (TODO?)
         )
 
     def _get_ko_tensor(self, ko_genes, **kwargs):
