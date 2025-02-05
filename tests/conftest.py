@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 from scTenifold.data import fetch_data
 
 
@@ -13,4 +12,3 @@ def morphine_datasets():
 def aging_datasets():
     aging = fetch_data("aging")
     return aging
-

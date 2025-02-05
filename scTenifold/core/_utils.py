@@ -7,6 +7,7 @@ __all__ = ["cal_fdr", "timer"]
 
 def cal_fdr(p_vals):
     from scipy.stats import rankdata
+
     ranked_p_values = rankdata(p_vals)
     fdr = p_vals * len(p_vals) / ranked_p_values
     fdr[fdr > 1] = 1
@@ -19,7 +20,7 @@ def timer(func=None):
 
     @wraps(func)
     def _counter(*args, **kwargs):
-        if not kwargs.get("verbosity") is None:
+        if kwargs.get("verbosity") is not None:
             verbosity = kwargs.pop("verbosity")
         else:
             verbosity = 1
@@ -30,4 +31,5 @@ def timer(func=None):
             end = time.perf_counter()
             print(func.__name__, " processing time: ", str(end - start))
         return sol
+
     return _counter

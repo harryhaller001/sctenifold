@@ -3,7 +3,6 @@ from typing import Optional, Sequence
 
 import numpy as np
 import pandas as pd
-from scipy import sparse
 # from anndata import AnnData
 
 
@@ -13,9 +12,7 @@ DEFAULT_POS = ["CD44", "LY6C", "KLRG1", "CTLA", "ICOS", "LAG3"]
 DEFAULT_NEG = ["IL2", "TNF"]
 
 
-def get_test_df(n_cells: int = 100,
-                n_genes: int = 1000,
-                random_state: int = None):
+def get_test_df(n_cells: int = 100, n_genes: int = 1000, random_state: int = None):
     """
     Function to generate test dataframe
 
@@ -33,9 +30,14 @@ def get_test_df(n_cells: int = 100,
     test_df: pd.DataFrame
         testing data
     """
-    data = np.random.default_rng(seed=random_state).negative_binomial(20, 0.98,
-                                                                      n_cells * n_genes).reshape(n_genes, n_cells)
-    pseudo_gene_names = ["MT-{}".format(i) for i in range(1, 11)] + ["NG-{}".format(i) for i in range(1, n_genes - 9)]
+    data = (
+        np.random.default_rng(seed=random_state)
+        .negative_binomial(20, 0.98, n_cells * n_genes)
+        .reshape(n_genes, n_cells)
+    )
+    pseudo_gene_names = ["MT-{}".format(i) for i in range(1, 11)] + [
+        "NG-{}".format(i) for i in range(1, n_genes - 9)
+    ]
     pseudo_cell_names = ["Cell-{}".format(i) for i in range(1, n_cells + 1)]
     return pd.DataFrame(data, index=pseudo_gene_names, columns=pseudo_cell_names)
 
@@ -66,6 +68,7 @@ class TestDataGenerator:
     random_state: int, default = 42
 
     """
+
     n_genes: int = 1000
     n_samples: int = 100
     pos_eff_ratio: float = 0.3
@@ -83,33 +86,42 @@ class TestDataGenerator:
             self.target_pos = DEFAULT_POS
         if self.target_neg is None:
             self.target_neg = []
-        self.X = random_state.negative_binomial(20, 0.9,
-                                                size=(self.n_genes, self.n_samples))
+        self.X = random_state.negative_binomial(
+            20, 0.9, size=(self.n_genes, self.n_samples)
+        )
         self._add_eff(random_state)
 
-        self.gene_list = ([f"pseudo_G{i}" for i in range(self.n_genes -
-                                                         len(self.target_pos) -
-                                                         len(self.target_neg))] +
-                          self.target_pos + self.target_neg)
+        self.gene_list = (
+            [
+                f"pseudo_G{i}"
+                for i in range(
+                    self.n_genes - len(self.target_pos) - len(self.target_neg)
+                )
+            ]
+            + self.target_pos
+            + self.target_neg
+        )
         self.samples = [f"cell{i}" for i in range(self.X.shape[1])]
         self.n_X = _normalize(self.X)
 
     def _add_eff(self, random_state):
         pos_eff_size = int(self.n_samples * self.pos_eff_ratio)
         neg_eff_size = int(self.n_samples * self.neg_eff_ratio)
-        effect = np.zeros(shape=(self.n_genes, pos_eff_size+neg_eff_size), dtype=np.int32)
-        effect[-len(self.target_pos)-len(self.target_neg):
-               -len(self.target_neg), :pos_eff_size] = random_state.negative_binomial(20, 0.5,
-                                                                                      size=(len(self.target_pos),
-                                                                                            pos_eff_size))
-        effect[-len(self.target_neg):, pos_eff_size:] = random_state.negative_binomial(20, 0.5,
-                                                                                       size=(len(self.target_neg),
-                                                                                             neg_eff_size))
-        self.X[:, -pos_eff_size-neg_eff_size:] += effect
+        effect = np.zeros(
+            shape=(self.n_genes, pos_eff_size + neg_eff_size), dtype=np.int32
+        )
+        effect[
+            -len(self.target_pos) - len(self.target_neg) : -len(self.target_neg),
+            :pos_eff_size,
+        ] = random_state.negative_binomial(
+            20, 0.5, size=(len(self.target_pos), pos_eff_size)
+        )
+        effect[-len(self.target_neg) :, pos_eff_size:] = random_state.negative_binomial(
+            20, 0.5, size=(len(self.target_neg), neg_eff_size)
+        )
+        self.X[:, -pos_eff_size - neg_eff_size :] += effect
 
-    def save_data(self,
-                  file_path,
-                  use_normalized):
+    def save_data(self, file_path, use_normalized):
         self.get_data("pandas", use_normalized)["X"].to_csv(file_path)
 
     def get_data(self, data_type, use_normalized) -> dict:
@@ -128,18 +140,20 @@ class TestDataGenerator:
             #         "copy": True}
             return {}
         elif data_type == "numpy":
-            return {"random_state": self.random_state_seed,
-                    "X": used_X,
-                    "gene_list": self.gene_list,
-                    "sample_list": self.samples,
-                    "n_bins": self.n_bins,
-                    "n_ctrl": self.n_ctrl}
+            return {
+                "random_state": self.random_state_seed,
+                "X": used_X,
+                "gene_list": self.gene_list,
+                "sample_list": self.samples,
+                "n_bins": self.n_bins,
+                "n_ctrl": self.n_ctrl,
+            }
         elif data_type == "pandas":
-            used_X = pd.DataFrame(used_X,
-                                  index=self.gene_list,
-                                  columns=self.samples)
-            return {"random_state": self.random_state_seed,
-                    "X": used_X,
-                    "genes": self.target_pos,
-                    "n_bins": self.n_bins,
-                    "n_ctrl": self.n_ctrl}
+            used_X = pd.DataFrame(used_X, index=self.gene_list, columns=self.samples)
+            return {
+                "random_state": self.random_state_seed,
+                "X": used_X,
+                "genes": self.target_pos,
+                "n_bins": self.n_bins,
+                "n_ctrl": self.n_ctrl,
+            }

@@ -10,9 +10,7 @@ from scipy.stats import chi2
 from scTenifold.plotting._dim_reduction import *
 
 
-def plot_network_graph(network: np.ndarray,
-                       weight_thres=0.1,
-                       con_thres=0) -> None:
+def plot_network_graph(network: np.ndarray, weight_thres=0.1, con_thres=0) -> None:
     """
     Plot graph of a PCnet
 
@@ -30,22 +28,20 @@ def plot_network_graph(network: np.ndarray,
     """
     network = abs(network.copy())
     network[network < weight_thres] = 0
-    valid_rows, valid_cols = (network.sum(axis=1) > con_thres), (network.sum(axis=0) > con_thres)
-    network = network[valid_rows,:][:, valid_cols]
+    valid_rows, valid_cols = (
+        (network.sum(axis=1) > con_thres),
+        (network.sum(axis=0) > con_thres),
+    )
+    network = network[valid_rows, :][:, valid_cols]
     G = nx.from_numpy_array(network)
     pos = nx.kamada_kawai_layout(G)
     fig, ax = plt.subplots(figsize=(8, 8))
-    nx.draw_networkx_edges(G, pos,
-                           ax=ax, nodelist=[0], alpha=0.4)
-    nx.draw_networkx_nodes(G, pos,
-                           ax=ax,
-                           node_size=10,
-                           cmap=plt.cm.Reds_r)
+    nx.draw_networkx_edges(G, pos, ax=ax, nodelist=[0], alpha=0.4)
+    nx.draw_networkx_nodes(G, pos, ax=ax, node_size=10, cmap=plt.cm.Reds_r)
     plt.show()
 
 
-def plot_network_heatmap(network: np.ndarray,
-                         figsize=(12, 12)) -> None:
+def plot_network_heatmap(network: np.ndarray, figsize=(12, 12)) -> None:
     """
     Plot a heatmap of a PC network
 
@@ -63,11 +59,13 @@ def plot_network_heatmap(network: np.ndarray,
     sns.heatmap(network, center=0.0, ax=ax)
 
 
-def plot_qqplot(df,
-                exp_col="FC",
-                stat_col="adjusted p-value",
-                plot_qqline: bool = True,
-                sig_threshold: float = 0.1) -> None:
+def plot_qqplot(
+    df,
+    exp_col="FC",
+    stat_col="adjusted p-value",
+    plot_qqline: bool = True,
+    sig_threshold: float = 0.1,
+) -> None:
     """
     Plot QQ-plot using a d_regulation dataframe
 
@@ -100,21 +98,22 @@ def plot_qqplot(df,
         y1, y2 = data[exp_col].quantile(0.25), data[exp_col].quantile(0.75)
         slope = (y2 - y1) / (x2 - x1)
         intercept = y1 - slope * x1
-        plt.plot([xl_1, xl_2],
-                 [slope * xl_1 + intercept, slope * xl_2 + intercept])
+        plt.plot([xl_1, xl_2], [slope * xl_1 + intercept, slope * xl_2 + intercept])
         plt.xlim([xl_1, xl_2])
     plt.show()
 
 
-def plot_embedding(df,
-                   groups: dict,
-                   method: str = "UMAP",
-                   plot_2D: bool = True,
-                   figsize: tuple = (8, 8),
-                   size: int = 10,
-                   title: str = None,
-                   palette: str = "muted",
-                   **kwargs):
+def plot_embedding(
+    df,
+    groups: dict,
+    method: str = "UMAP",
+    plot_2D: bool = True,
+    figsize: tuple = (8, 8),
+    size: int = 10,
+    title: str = None,
+    palette: str = "muted",
+    **kwargs,
+):
     """
     Do dimension reduction and plot the embeddings onto a 2D plot
 
@@ -158,18 +157,26 @@ def plot_embedding(df,
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(111, projection="3d")
     for i, (group_name, sample_names) in enumerate(groups.items()):
-        em1, em2 = np.array([feature_df.loc[name, '{} 1'.format(emb_name)] for name in sample_names]), \
-                   np.array([feature_df.loc[name, '{} 2'.format(emb_name)] for name in sample_names])
+        em1, em2 = (
+            np.array(
+                [feature_df.loc[name, "{} 1".format(emb_name)] for name in sample_names]
+            ),
+            np.array(
+                [feature_df.loc[name, "{} 2".format(emb_name)] for name in sample_names]
+            ),
+        )
 
         if plot_2D:
             ax.scatter(em1, em2, s=size, label=group_name, c=[colors[i]])
         else:
-            em3 = np.array([feature_df.loc[name, '{} 3'.format(emb_name)] for name in sample_names])
+            em3 = np.array(
+                [feature_df.loc[name, "{} 3".format(emb_name)] for name in sample_names]
+            )
             ax.scatter(em1, em2, em3, s=size, label=group_name, c=[colors[i]])
 
-    x_label = '{} 1'.format(emb_name)
-    y_label = '{} 2'.format(emb_name)
-    z_label = None if plot_2D else '{} 3'.format(emb_name)
+    x_label = "{} 1".format(emb_name)
+    y_label = "{} 2".format(emb_name)
+    z_label = None if plot_2D else "{} 3".format(emb_name)
 
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -183,13 +190,15 @@ def plot_embedding(df,
     plt.show()
 
 
-def plot_hist(df_1,
-              df_1_name: str,
-              df_2: Optional[pd.DataFrame] = None,
-              df_2_name: Optional[str] = None,
-              sum_axis: int = 0,
-              label: str = "Sample",
-              figsize: Tuple[int, int] = (10, 8)):
+def plot_hist(
+    df_1,
+    df_1_name: str,
+    df_2: Optional[pd.DataFrame] = None,
+    df_2_name: Optional[str] = None,
+    sum_axis: int = 0,
+    label: str = "Sample",
+    figsize: Tuple[int, int] = (10, 8),
+):
     """
 
     Parameters

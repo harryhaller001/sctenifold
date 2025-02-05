@@ -9,12 +9,14 @@ from scanpy.tools import score_genes
 from scTenifold.data._sim import *
 
 
-def adobo_score(X,
-                genes,
-                n_bins: int = 25,
-                n_ctrl: int = 50,
-                random_state: int = 42,
-                file_path: Path = None):
+def adobo_score(
+    X,
+    genes,
+    n_bins: int = 25,
+    n_ctrl: int = 50,
+    random_state: int = 42,
+    file_path: Path = None,
+):
     if len(genes) == 0:
         raise ValueError('Gene list ("genes") is empty.')
     gene_mean = X.mean(axis=1)
@@ -27,7 +29,9 @@ def adobo_score(X,
             ret.append(sampled_bin.index)
         else:
             ret.append(
-                sampled_bin.sample(n_ctrl, replace=True, random_state=random_state).index
+                sampled_bin.sample(
+                    n_ctrl, replace=True, random_state=random_state
+                ).index
             )
     con = []
     for g in ret:
@@ -37,28 +41,28 @@ def adobo_score(X,
     con.index = genes
     targets = X[X.index.isin(genes)]
     targets = targets.reindex(genes)
-    scores = (targets-con).mean(axis=0)
+    scores = (targets - con).mean(axis=0)
     if file_path:
         scores.to_csv(file_path)
     return scores
 
 
-def _get_assigned_bins(data_avg: np.ndarray,
-                       cluster_len: int,
-                       n_bins: int) -> np.ndarray:
-    assigned_bin = np.zeros(shape=(cluster_len, ), dtype=np.int32)  # (G,)
+def _get_assigned_bins(
+    data_avg: np.ndarray, cluster_len: int, n_bins: int
+) -> np.ndarray:
+    assigned_bin = np.zeros(shape=(cluster_len,), dtype=np.int32)  # (G,)
     bin_size = cluster_len / n_bins
     for i_bin in range(n_bins):
-        assigned_bin[(assigned_bin == 0) &
-                     (data_avg <= data_avg[int(np.round(bin_size * i_bin))])] = i_bin
+        assigned_bin[
+            (assigned_bin == 0)
+            & (data_avg <= data_avg[int(np.round(bin_size * i_bin))])
+        ] = i_bin
     return assigned_bin
 
 
-def _get_ctrl_use(assigned_bin: np.ndarray,
-                  gene_arr,
-                  target_dict,
-                  n_ctrl,
-                  random_state) -> List[str]:
+def _get_ctrl_use(
+    assigned_bin: np.ndarray, gene_arr, target_dict, n_ctrl, random_state
+) -> List[str]:
     selected_bins = list(set(assigned_bin[np.in1d(gene_arr, target_dict["Pos"])]))
     genes_in_same_bin = gene_arr[np.in1d(assigned_bin, selected_bins)]
     ctrl_use = list()
@@ -67,23 +71,24 @@ def _get_ctrl_use(assigned_bin: np.ndarray,
     return list(set(ctrl_use))
 
 
-def cell_cycle_score(X,
-                     gene_list: List[str],
-                     sample_list: List[str],
-                     target_dict: Optional[Dict[str, List[str]]] = None,
-                     n_bins: int = 25,
-                     n_ctrl: int = 50,
-                     random_state: int = 42,
-                     file_path: Optional[Path] = None):
+def cell_cycle_score(
+    X,
+    gene_list: List[str],
+    sample_list: List[str],
+    target_dict: Optional[Dict[str, List[str]]] = None,
+    n_bins: int = 25,
+    n_ctrl: int = 50,
+    random_state: int = 42,
+    file_path: Optional[Path] = None,
+):
     random_state = np.random.default_rng(random_state)
     if target_dict is None:
-        target_dict = {"Pos": DEFAULT_POS,
-                       "Neg": DEFAULT_NEG}
+        target_dict = {"Pos": DEFAULT_POS, "Neg": DEFAULT_NEG}
     else:
         target_dict = {k: [i.upper() for i in v] for k, v in target_dict.items()}
 
     if len(set(gene_list) & set(target_dict["Pos"])) == 0:
-        raise ValueError('No feature genes found in gene_list.')
+        raise ValueError("No feature genes found in gene_list.")
 
     gene_list = [i.upper() for i in gene_list]
     cluster_len = X.shape[0]
@@ -94,8 +99,9 @@ def cell_cycle_score(X,
     X = X[sort_arg, :]
 
     assigned_bin = _get_assigned_bins(data_avg, cluster_len, n_bins)
-    used_ctrl = _get_ctrl_use(assigned_bin, gene_list, target_dict,
-                              n_ctrl, random_state)
+    used_ctrl = _get_ctrl_use(
+        assigned_bin, gene_list, target_dict, n_ctrl, random_state
+    )
     ctrl_score = X[np.in1d(gene_list, used_ctrl), :].mean(axis=0).T
     features_score = X[np.in1d(gene_list, target_dict["Pos"]), :].mean(axis=0).T
     scores = features_score - ctrl_score
@@ -105,34 +111,47 @@ def cell_cycle_score(X,
     return scores
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-r", "--random_state",
-                        help="random seed", default=42, type=int)
-    parser.add_argument("-o", "--output_path",
-                        help="output directory, it will be automatically and recursively created",
-                        default=".", type=str)
-    parser.add_argument("-g", "--genes",
-                        help="number of the genes in the test data",
-                        default=1000, type=int)
-    parser.add_argument("-s", "--samples",
-                        help="number of the samples (cells/observations) in the test data",
-                        default=100, type=int)
-    parser.add_argument("-b", "--bins",
-                        help="number of bins",
-                        default=25, type=int)
-    parser.add_argument("-c", "--ctrls",
-                        help="number of controls",
-                        default=50, type=int)
+    parser.add_argument(
+        "-r", "--random_state", help="random seed", default=42, type=int
+    )
+    parser.add_argument(
+        "-o",
+        "--output_path",
+        help="output directory, it will be automatically and recursively created",
+        default=".",
+        type=str,
+    )
+    parser.add_argument(
+        "-g",
+        "--genes",
+        help="number of the genes in the test data",
+        default=1000,
+        type=int,
+    )
+    parser.add_argument(
+        "-s",
+        "--samples",
+        help="number of the samples (cells/observations) in the test data",
+        default=100,
+        type=int,
+    )
+    parser.add_argument("-b", "--bins", help="number of bins", default=25, type=int)
+    parser.add_argument(
+        "-c", "--ctrls", help="number of controls", default=50, type=int
+    )
     args = parser.parse_args()
 
     output_dir = Path(args.output_path)
     output_dir.mkdir(parents=True, exist_ok=True)
-    data_obj = TestDataGenerator(n_genes=args.genes,
-                                 n_samples=args.samples,
-                                 n_bins=args.bins,
-                                 n_ctrl=args.ctrls,
-                                 random_state=args.random_state)
+    data_obj = TestDataGenerator(
+        n_genes=args.genes,
+        n_samples=args.samples,
+        n_bins=args.bins,
+        n_ctrl=args.ctrls,
+        random_state=args.random_state,
+    )
     data_obj.save_data(output_dir / Path("test_data.csv"), use_normalized=True)
     np_data = data_obj.get_data("numpy", True)
     np_data["file_path"] = output_dir / Path("cell_scores.csv")
@@ -140,5 +159,7 @@ if __name__ == '__main__':
     pd_data["file_path"] = output_dir / Path("adobo_cell_scores.csv")
 
     cell_cycle_score(**np_data)
-    score_genes(**(data_obj.get_data("ann_data", True))).write_csvs(output_dir / Path("scanpy_result"))
+    score_genes(**(data_obj.get_data("ann_data", True))).write_csvs(
+        output_dir / Path("scanpy_result")
+    )
     adobo_score(**pd_data)

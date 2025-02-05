@@ -1,4 +1,3 @@
-import pytest
 from functools import partial
 
 import numpy as np
@@ -19,7 +18,12 @@ def test_cal_pc_coefs_stability():
     p_ = partial(cal_pc_coefs, method="sklearn", X=df, n_comp=3, random_state=42)
     bs_2 = [p_(i) for i in range(df.shape[1])]
 
-    assert all([stats.pearsonr(b1.flatten(), b2.flatten())[0] > 0.99 for b1, b2 in zip(bs, bs_2)])
+    assert all(
+        [
+            stats.pearsonr(b1.flatten(), b2.flatten())[0] > 0.99
+            for b1, b2 in zip(bs, bs_2)
+        ]
+    )
 
 
 def test_pc_net():

@@ -2,9 +2,7 @@ from typing import Sequence
 
 import numpy as np
 import pandas as pd
-import scipy
 from scTenifold.core._utils import timer
-from tensorly.decomposition import parafac, parafac2, parafac_power_iteration
 from tensorly import decomposition
 import tensorly as tl
 
@@ -12,15 +10,17 @@ __all__ = ["tensor_decomp"]
 
 
 @timer
-def tensor_decomp(networks: np.ndarray,
-                  gene_names: Sequence[str],
-                  method: str = "parafac",
-                  n_decimal: int = 1,
-                  K: int = 5,
-                  tol: float = 1e-6,
-                  max_iter: int = 1000,
-                  random_state: int = 42,
-                  **kwargs) -> pd.DataFrame:
+def tensor_decomp(
+    networks: np.ndarray,
+    gene_names: Sequence[str],
+    method: str = "parafac",
+    n_decimal: int = 1,
+    K: int = 5,
+    tol: float = 1e-6,
+    max_iter: int = 1000,
+    random_state: int = 42,
+    **kwargs,
+) -> pd.DataFrame:
     """
     Perform tensor decomposition on pc networks
 
@@ -59,8 +59,14 @@ def tensor_decomp(networks: np.ndarray,
     # Us, est, res_hist = cp_als(networks, n_components=K, max_iter=max_iter, tol=tol)
     # print(est.shape, len(Us), res_hist)
     print("Using tensorly")
-    factors = getattr(decomposition, method)(networks, rank=K, n_iter_max=max_iter, tol=tol,
-                                             random_state=random_state, **kwargs)
+    factors = getattr(decomposition, method)(
+        networks,
+        rank=K,
+        n_iter_max=max_iter,
+        tol=tol,
+        random_state=random_state,
+        **kwargs,
+    )
     estimate = tl.cp_to_tensor(factors)
     print(estimate.shape)
     out = np.sum(estimate, axis=-1) / len(networks)
