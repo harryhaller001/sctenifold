@@ -8,6 +8,7 @@ from scTenifold.data import get_test_df
 
 
 def test_scTenifoldNet():
+    """Testing Net."""
     df_1, df_2 = (
         get_test_df(n_cells=100, n_genes=100),
         get_test_df(n_cells=100, n_genes=100),
@@ -17,10 +18,11 @@ def test_scTenifoldNet():
     print(result)
     assert isinstance(result, pd.DataFrame)
     sc.save(file_dir="./saved_net")
-    sc2 = scTenifoldNet.load(file_dir="./saved_net")
+    _ = scTenifoldNet.load(file_dir="./saved_net")
 
 
 def test_scTenifoldNet_skip_qc():
+    """Testing Net with skipped QC."""
     df_1, df_2 = (
         get_test_df(n_cells=100, n_genes=100),
         get_test_df(n_cells=100, n_genes=100),
@@ -49,10 +51,11 @@ def test_scTenifoldNet_skip_qc():
     assert Path("./saved_net/ma/manifold_alignment.csv").is_file()
     assert Path("./saved_net/dr/d_regulation.csv").is_file()
 
-    sc2 = scTenifoldNet.load(file_dir="./saved_net")
+    _ = scTenifoldNet.load(file_dir="./saved_net")
 
 
 def test_scTenifoldKnk_method1():
+    """Testing KNK method 1."""
     df = get_test_df(n_cells=100, n_genes=100, random_state=42)
     sc = scTenifoldKnk(data=df, qc_kws={"min_lib_size": 1})
     sc.run_step("qc")
@@ -77,6 +80,7 @@ def test_scTenifoldKnk_method1():
 
 
 def test_scTenifoldKnk_method2():
+    """Testing Knk method 2."""
     df = get_test_df(n_genes=100, n_cells=100)
     sc = scTenifoldKnk(
         data=df,

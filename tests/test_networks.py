@@ -8,6 +8,7 @@ from scTenifold.data import get_test_df
 
 
 def test_cal_pc_coefs_stability():
+    """Testing PC coef stability calculation."""
     df = get_test_df(n_genes=100).values
     df = np.log2(df + 1)
     df = df.T  # cells x genes
@@ -18,10 +19,11 @@ def test_cal_pc_coefs_stability():
     p_ = partial(cal_pc_coefs, method="sklearn", X=df, n_comp=3, random_state=42)
     bs_2 = [p_(i) for i in range(df.shape[1])]
 
-    assert all([stats.pearsonr(b1.flatten(), b2.flatten())[0] > 0.99 for b1, b2 in zip(bs, bs_2, strict=False)])
+    assert all([stats.pearsonr(b1.flatten(), b2.flatten())[0] > 0.99 for b1, b2 in zip(bs, bs_2, strict=False)])  # noqa: C419
 
 
 def test_pc_net():
+    """Testing PC net."""
     df = get_test_df(n_genes=100)
     make_networks(df, n_nets=3, n_samp_cells=100, n_cpus=1)
     make_networks(df, n_nets=3, n_samp_cells=100, n_cpus=4)

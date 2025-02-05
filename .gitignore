@@ -5,6 +5,10 @@
 /scTenifoldpy.egg-info
 /dist
 
+/datasets
+/saved_knk
+/saved_net
+
 
 
 # Byte-compiled / optimized / DLL files

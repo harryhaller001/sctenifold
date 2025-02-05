@@ -8,6 +8,7 @@ runner = CliRunner()
 
 
 def test_config():
+    """Testing config."""
     result = runner.invoke(app, ["config", "-t", 1, "-p", "./net_config.yml"])
     assert Path("./net_config.yml").is_file()
     assert result.exit_code == 0
