@@ -1,17 +1,15 @@
 from functools import partial
 from warnings import warn
-from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
+import ray
+import scipy.sparse.linalg
 from scipy import stats
 from scipy.sparse import coo_matrix
-import scipy.sparse.linalg
 from sklearn.utils.extmath import randomized_svd
-import ray
 
-from scTenifold.core._utils import cal_fdr, timer
-
+from ._utils import cal_fdr, timer
 
 __all__ = [
     "make_networks",
@@ -44,9 +42,7 @@ def cal_pc_coefs(k, X, n_comp, method="sklearn", random_state=42):
         raise ValueError("Invalid method")
     coef = VT[:n_comp, :].T  # (genes - 1) x n_comp
     score = Xi @ coef  # cells x n_comp
-    score = score / np.expand_dims(
-        np.power(np.sqrt(np.sum(np.power(score, 2), axis=0)), 2), 0
-    )
+    score = score / np.expand_dims(np.power(np.sqrt(np.sum(np.power(score, 2), axis=0)), 2), 0)
     betas = coef.dot(np.sum(np.expand_dims(y, 1) * score, axis=0))  # (genes - 1),
     return np.expand_dims(betas, 1)
 
@@ -135,7 +131,7 @@ def pc_net_single(
 def make_networks(
     data: pd.DataFrame,
     n_nets: int = 10,
-    n_samp_cells: Optional[int] = 500,
+    n_samp_cells: int | None = 500,
     n_comp: int = 3,
     scale_scores: bool = True,
     symmetric: bool = False,
@@ -143,9 +139,8 @@ def make_networks(
     random_state: int = 42,
     n_cpus: int = -1,
     **kwargs,
-) -> List[coo_matrix]:
-    """
-    Make PCNets from a data frame by subsampling the cells
+) -> list[coo_matrix]:
+    """Make PCNets from a data frame by subsampling the cells.
 
     Parameters
     ----------
@@ -170,16 +165,14 @@ def make_networks(
     kwargs
         Keyword arguments
 
-    Returns
+    Returns:
     -------
     networks: List[coo_matrix]
         A list contains PCNets (in coo sparse matrix format)
     """
     gene_names = data.index.to_numpy()
     n_genes, n_cells = data.shape
-    assert not np.array_equal(gene_names, np.array([i for i in range(n_genes)])), (
-        "Gene names are required"
-    )
+    assert not np.array_equal(gene_names, np.array(list(range(n_genes)))), "Gene names are required"
     rng = np.random.default_rng(random_state)
     networks = []
     sel_samples = []
@@ -193,12 +186,8 @@ def make_networks(
         ray.init(num_cpus=n_cpus)
         # dask.config.set(scheduler=ray_dask_get)
         Z_data = ray.put(data)
-        for net in range(n_nets):
-            sample = (
-                rng.choice(n_cells, n_samp_cells, replace=True)
-                if n_samp_cells is not None
-                else np.arange(n_cells)
-            )
+        for _net in range(n_nets):
+            sample = rng.choice(n_cells, n_samp_cells, replace=True) if n_samp_cells is not None else np.arange(n_cells)
             sel_samples.append(sample)
             tasks.append(
                 pc_net_parallelized.remote(
@@ -215,12 +204,8 @@ def make_networks(
         del Z_data
     else:
         results = []
-        for net in range(n_nets):
-            sample = (
-                rng.choice(n_cells, n_samp_cells, replace=True)
-                if n_samp_cells is not None
-                else np.arange(n_cells)
-            )
+        for _net in range(n_nets):
+            sample = rng.choice(n_cells, n_samp_cells, replace=True) if n_samp_cells is not None else np.arange(n_cells)
             sel_samples.append(sample)
             results.append(
                 pc_net_single(
@@ -260,8 +245,7 @@ def cal_pcNet(
     random_state: int = 42,
     **kwargs,
 ) -> coo_matrix:
-    """
-    Calculate one pcNet without sampling. An API for getting one PCNet instead of many.
+    """Calculate one pcNet without sampling. An API for getting one PCNet instead of many.
 
     Parameters
     ----------
@@ -280,12 +264,12 @@ def cal_pcNet(
     kwargs
         Keyword arguments
 
-    Returns
+    Returns:
     -------
     pcNet: coo_matrix
     Result network
 
-    See Also
+    See Also:
     --------
     make_networks
 
@@ -304,11 +288,8 @@ def cal_pcNet(
 
 
 @timer
-def manifold_alignment(
-    X: pd.DataFrame, Y: pd.DataFrame, d: int = 30, tol: float = 1e-8, **kwargs
-) -> pd.DataFrame:
-    """
-    Performing manifold alignment on two dataframes
+def manifold_alignment(X: pd.DataFrame, Y: pd.DataFrame, d: int = 30, tol: float = 1e-8, **kwargs) -> pd.DataFrame:
+    """Performing manifold alignment on two dataframes.
 
     Parameters
     ----------
@@ -320,7 +301,8 @@ def manifold_alignment(
         The dimension of the low-dimensional feature space
     tol: float, default = 1e-8
         The tolerance of eigen values
-    Returns
+
+    Returns:
     -------
     ma_df: pd.DataFrame
         A dataframe contains manifold alignment result, expected shape = (n_genes * 2, d)
@@ -347,21 +329,19 @@ def manifold_alignment(
     ]
     return pd.DataFrame(
         eg_vecs[:, :d],
-        index=["X_{g}".format(g=g) for g in shared_genes]
-        + ["Y_{g}".format(g=g) for g in shared_genes],
-        columns=["NLMA_{i}".format(i=i + 1) for i in range(min(d, eg_vecs.shape[1]))],
+        index=[f"X_{g}" for g in shared_genes] + [f"Y_{g}" for g in shared_genes],
+        columns=[f"NLMA_{i + 1}" for i in range(min(d, eg_vecs.shape[1]))],
     )
 
 
 @timer
 def d_regulation(
     data,
-    sorted_by: Union[str, list] = "p-value",
-    ascending: Union[bool, list] = True,
+    sorted_by: str | list = "p-value",
+    ascending: bool | list = True,
     **kwargs,
 ):
-    """
-    Evaluates the difference in regulation
+    """Evaluates the difference in regulation.
 
     Parameters
     ----------
@@ -377,13 +357,13 @@ def d_regulation(
             chi2_kws - kwargs for chi-square test
             n_ko_genes - int, indicating the number of KO genes
 
-    Examples
+    Examples:
     ---------
     d_reg_df = d_regulation(ma_df)
 
     d_reg_df = d_regulation(ma_df, boxcox_kws={"lmbda": 0}, chi2_kws={"df": 1})
 
-    Returns
+    Returns:
     -------
     d_reg_df: pd.DataFrame
         A dataFrame contains difference in regulation result sorted by p-value
@@ -392,20 +372,14 @@ def d_regulation(
     """
     all_gene_names = data.index.to_list()
     gene_names = [g[2:] for g in all_gene_names if "X_" == g[:2]]
-    assert len(gene_names) * 2 == len(all_gene_names), (
-        "Number of identified and expected genes are not the same"
-    )
-    assert all(
-        ["Y_" + g == y for g, y in zip(gene_names, all_gene_names[len(gene_names) :])]
-    ), (
+    assert len(gene_names) * 2 == len(all_gene_names), "Number of identified and expected genes are not the same"
+    assert all("Y_" + g == y for g, y in zip(gene_names, all_gene_names[len(gene_names) :], strict=False)), (
         "Genes are not ordered as expected. X_ genes should be followed by Y_ genes in the same order"
     )
     d_metrics = np.array(
         [
             np.linalg.norm((data.iloc[x, :] - data.iloc[y, :]).values)
-            for x, y in zip(
-                range(len(gene_names)), range(len(gene_names), len(all_gene_names))
-            )
+            for x, y in zip(range(len(gene_names)), range(len(gene_names), len(all_gene_names)), strict=False)
         ]
     )
     boxcox_kws = kwargs.get("boxcox_kws") if "boxcox_kws" in kwargs else {}
@@ -417,15 +391,16 @@ def d_regulation(
         t_d_metrics = np.array(t)
         if max_log < 0:
             t_d_metrics = 1 / t_d_metrics
-    except:
-        warn("cannot find the box-cox transformed values")
+
+    except (
+        ValueError
+    ):  # Most likely it is ValueError https://github.com/scipy/scipy/blob/v1.15.1/scipy/stats/_morestats.py#L0-L1
+        warn("cannot find the box-cox transformed values", stacklevel=2)
         t_d_metrics = d_metrics
 
     z_scores = (t_d_metrics - t_d_metrics.mean()) / t_d_metrics.std()
     n_ko_genes = kwargs.get("n_ko_genes") if "n_ko_genes" in kwargs else 0
-    expected_val = np.mean(
-        np.power(d_metrics[np.argsort(d_metrics)[::-1][n_ko_genes:]], 2)
-    )
+    expected_val = np.mean(np.power(d_metrics[np.argsort(d_metrics)[::-1][n_ko_genes:]], 2))
     FC = np.power(d_metrics, 2) / expected_val
     p_values = 1 - stats.chi2.cdf(FC, **chi2_kws)
     p_adj = cal_fdr(p_values)

@@ -1,6 +1,5 @@
-from functools import wraps, partial
 import time
-
+from functools import partial, wraps
 
 __all__ = ["cal_fdr", "timer"]
 

@@ -1,5 +1,6 @@
-import pandas as pd
 from warnings import warn
+
+import pandas as pd
 
 
 def sc_QC(
@@ -11,8 +12,7 @@ def sc_QC(
     min_exp_avg: float = 0,
     min_exp_sum: float = 0,
 ) -> pd.DataFrame:
-    """
-    main QC function in scTenifold pipelines
+    """Main QC function in scTenifold pipelines.
 
     Parameters
     ----------
@@ -30,7 +30,8 @@ def sc_QC(
         Minimum average expression value in each gene
     min_exp_sum: float, default = 0
         Minimum sum of expression value in each gene
-    Returns
+
+    Returns:
     -------
     X_modified: pd.DataFrame
         The DataFrame after QC
@@ -59,18 +60,15 @@ def sc_QC(
         before_s = X.shape[1]
         mt_rates = X[mt_genes].sum(axis=0) / X.sum(axis=0)
         X = X.loc[:, mt_rates < max_mito_ratio]
-        print(
-            f"Removed {before_s - X.shape[1]} samples from original data (mt genes ratio > {max_mito_ratio})"
-        )
+        print(f"Removed {before_s - X.shape[1]} samples from original data (mt genes ratio > {max_mito_ratio})")
     else:
         warn(
-            "Mitochondrial genes were not found. Be aware that apoptotic cells may be present in your sample."
+            "Mitochondrial genes were not found. Be aware that apoptotic cells may be present in your sample.",
+            stacklevel=2,
         )
     before_g = X.shape[0]
     X = X[(X != 0).mean(axis=1) > min_percent]
-    print(
-        f"Removed {before_g - X.shape[0]} genes expressed in less than {min_percent} of data"
-    )
+    print(f"Removed {before_g - X.shape[0]} genes expressed in less than {min_percent} of data")
 
     before_g = X.shape[0]
     if X.shape[1] > 500:

@@ -1,11 +1,10 @@
 import re
-from pathlib import Path
 import zipfile
+from pathlib import Path
 from warnings import warn
 
-from scipy.sparse.csr import csr_matrix
 import pandas as pd
-
+from scipy.sparse.csr import csr_matrix
 
 __all__ = ["read_mtx", "read_folder"]
 
@@ -15,9 +14,7 @@ def _get_mtx_body(rows, decode=None, print_header=True):
     while not find_header_btn:
         m = re.match(
             r"\d*\s\d*\s\d*",
-            rows[row_ptr].strip()
-            if decode is None
-            else rows[row_ptr].decode(decode).strip(),
+            rows[row_ptr].strip() if decode is None else rows[row_ptr].decode(decode).strip(),
         )
         if m is not None:
             find_header_btn = True
@@ -72,12 +69,7 @@ def _parse_mtx(mtx_file_name):
             else:
                 body = (
                     pd.DataFrame(
-                        [
-                            f.decode("utf-8")
-                            .strip()
-                            .split("," if sf == ".csv" else "\t")
-                            for f in fn.readlines()
-                        ]
+                        [f.decode("utf-8").strip().split("," if sf == ".csv" else "\t") for f in fn.readlines()]
                     )
                     .iloc[1:, 1:]
                     .values
@@ -90,8 +82,7 @@ def _parse_mtx(mtx_file_name):
 
 
 def read_mtx(mtx_file_name, gene_file_name, barcode_file_name) -> pd.DataFrame:
-    """
-    Read mtx data
+    """Read mtx data.
 
     Parameters
     ----------
@@ -102,23 +93,19 @@ def read_mtx(mtx_file_name, gene_file_name, barcode_file_name) -> pd.DataFrame:
     barcode_file_name
         File name of barcode vector
 
-    Returns
+    Returns:
     -------
     df: pd.DataFrame
         A dataframe with genes as rows and cells as columns
     """
     genes = pd.read_csv(gene_file_name, sep="\t", header=None).iloc[:, 0]
     barcodes = (
-        pd.read_csv(barcode_file_name, sep="\t", header=None).iloc[:, 0]
-        if barcode_file_name is not None
-        else None
+        pd.read_csv(barcode_file_name, sep="\t", header=None).iloc[:, 0] if barcode_file_name is not None else None
     )
     if barcodes is None:
-        warn("Barcode file is not existed. Added fake barcode name in the dataset")
+        warn("Barcode file is not existed. Added fake barcode name in the dataset", stacklevel=2)
     body, is_dense, n_rows, n_cols = _parse_mtx(mtx_file_name)
-    barcodes = (
-        barcodes if barcodes is not None else [f"barcode_{i}" for i in range(n_cols)]
-    )
+    barcodes = barcodes if barcodes is not None else [f"barcode_{i}" for i in range(n_cols)]
     print(f"creating a {(len(genes), len(barcodes))} matrix")
     if not is_dense:
         data = _build_matrix_from_sparse(body, shape=(len(genes), len(barcodes)))

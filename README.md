@@ -1,12 +1,12 @@
-# scTenifoldpy
+# scTenifold
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/biodbs.svg)](https://pypi.python.org/pypi/biodbs/)
 [![Pattern](https://img.shields.io/badge/DOI-10.1016/j.patter.2020.100139-blue)](https://www.sciencedirect.com/science/article/pii/S2666389920301872#bib48)
 [![GitHub license](https://img.shields.io/github/license/qwerty239qwe/scTenifoldpy.svg)](https://github.com/qwerty239qwe/scTenifoldpy/blob/master/LICENSE)
 
-This package is a Python version of [scTenifoldNet](https://github.com/cailab-tamu/scTenifoldNet) 
-and [scTenifoldKnk](https://github.com/cailab-tamu/scTenifoldKnk). If you are a R/MATLAB user, 
-please install them to use their functions. 
-Also, please [cite](https://www.sciencedirect.com/science/article/pii/S2666389920301872) the original paper properly 
+This package is a Python version of [scTenifoldNet](https://github.com/cailab-tamu/scTenifoldNet)
+and [scTenifoldKnk](https://github.com/cailab-tamu/scTenifoldKnk). If you are a R/MATLAB user,
+please install them to use their functions.
+Also, please [cite](https://www.sciencedirect.com/science/article/pii/S2666389920301872) the original paper properly
 if you are using this in a scientific publication. Thank you!
 
 ### Installation
@@ -43,7 +43,7 @@ result = sc.build()
 
 ### Command Line tool
 Once the package is installed, users can use commandline tool to generate all the results <br>
-Use this command to create a config.yml file, 
+Use this command to create a config.yml file,
 ```shell
 python -m scTenifold config -t 1 -p ./net_config.yml
 ```

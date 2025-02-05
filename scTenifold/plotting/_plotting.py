@@ -1,18 +1,15 @@
-from typing import Tuple, Optional
-
-import seaborn as sns
 import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 import pandas as pd
-import networkx as nx
+import seaborn as sns
 from scipy.stats import chi2
 
-from scTenifold.plotting._dim_reduction import *
+from ._dim_reduction import prepare_embedding_dfs, prepare_PCA_dfs
 
 
 def plot_network_graph(network: np.ndarray, weight_thres=0.1, con_thres=0) -> None:
-    """
-    Plot graph of a PCnet
+    """Plot graph of a PCnet.
 
     Parameters
     ----------
@@ -22,8 +19,9 @@ def plot_network_graph(network: np.ndarray, weight_thres=0.1, con_thres=0) -> No
         Minimum threshold of the pcnet's weights
     con_thres: float or int
         Minimum threshold of sum of weights
-    Returns
-    -------
+
+    Returns:
+    --------
     None
     """
     network = abs(network.copy())
@@ -42,8 +40,7 @@ def plot_network_graph(network: np.ndarray, weight_thres=0.1, con_thres=0) -> No
 
 
 def plot_network_heatmap(network: np.ndarray, figsize=(12, 12)) -> None:
-    """
-    Plot a heatmap of a PC network
+    """Plot a heatmap of a PC network.
 
     Parameters
     ----------
@@ -51,7 +48,8 @@ def plot_network_heatmap(network: np.ndarray, figsize=(12, 12)) -> None:
         A pcnet
     figsize: tuple of ints
         output figure size
-    Returns
+
+    Returns:
     -------
     None
     """
@@ -66,8 +64,7 @@ def plot_qqplot(
     plot_qqline: bool = True,
     sig_threshold: float = 0.1,
 ) -> None:
-    """
-    Plot QQ-plot using a d_regulation dataframe
+    """Plot QQ-plot using a d_regulation dataframe.
 
     Parameters
     ----------
@@ -81,7 +78,8 @@ def plot_qqplot(
         Plot Q-Q line on the plot
     sig_threshold: float
         The significance
-    Returns
+
+    Returns:
     -------
     None
     """
@@ -114,8 +112,7 @@ def plot_embedding(
     palette: str = "muted",
     **kwargs,
 ):
-    """
-    Do dimension reduction and plot the embeddings onto a 2D plot
+    """Do dimension reduction and plot the embeddings onto a 2D plot.
 
     Parameters
     ----------
@@ -136,11 +133,10 @@ def plot_embedding(
         reference: https://seaborn.pydata.org/generated/seaborn.color_palette.html
     kwargs: keyword arguments of doing dimension reduction
 
-    Returns
+    Returns:
     -------
     None
     """
-
     if method == "PCA":
         feature_df, exp_var_df, component_df = prepare_PCA_dfs(df, **kwargs)
         emb_name = "PC"
@@ -158,25 +154,19 @@ def plot_embedding(
         ax = fig.add_subplot(111, projection="3d")
     for i, (group_name, sample_names) in enumerate(groups.items()):
         em1, em2 = (
-            np.array(
-                [feature_df.loc[name, "{} 1".format(emb_name)] for name in sample_names]
-            ),
-            np.array(
-                [feature_df.loc[name, "{} 2".format(emb_name)] for name in sample_names]
-            ),
+            np.array([feature_df.loc[name, f"{emb_name} 1"] for name in sample_names]),
+            np.array([feature_df.loc[name, f"{emb_name} 2"] for name in sample_names]),
         )
 
         if plot_2D:
             ax.scatter(em1, em2, s=size, label=group_name, c=[colors[i]])
         else:
-            em3 = np.array(
-                [feature_df.loc[name, "{} 3".format(emb_name)] for name in sample_names]
-            )
+            em3 = np.array([feature_df.loc[name, f"{emb_name} 3"] for name in sample_names])
             ax.scatter(em1, em2, em3, s=size, label=group_name, c=[colors[i]])
 
-    x_label = "{} 1".format(emb_name)
-    y_label = "{} 2".format(emb_name)
-    z_label = None if plot_2D else "{} 3".format(emb_name)
+    x_label = f"{emb_name} 1"
+    y_label = f"{emb_name} 2"
+    z_label = None if plot_2D else f"{emb_name} 3"
 
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -193,13 +183,13 @@ def plot_embedding(
 def plot_hist(
     df_1,
     df_1_name: str,
-    df_2: Optional[pd.DataFrame] = None,
-    df_2_name: Optional[str] = None,
+    df_2: pd.DataFrame | None = None,
+    df_2_name: str | None = None,
     sum_axis: int = 0,
     label: str = "Sample",
-    figsize: Tuple[int, int] = (10, 8),
+    figsize: tuple[int, int] = (10, 8),
 ):
-    """
+    """Plot histogram.
 
     Parameters
     ----------
@@ -211,9 +201,9 @@ def plot_hist(
     label
     figsize
 
-    Returns
+    Returns:
     -------
-
+    None
     """
     fig, ax = plt.subplots(figsize=figsize)
     df_1 = df_1.copy()

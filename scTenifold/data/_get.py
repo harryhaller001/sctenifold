@@ -1,21 +1,16 @@
-from typing import Dict, Union, List
+import re
 import zipfile
 from io import BytesIO
-import re
 from pathlib import Path
 
-import requests
 import pandas as pd
-
+import requests
 
 from ._io import read_mtx
 
-
 _valid_ds_names = ["AD", "Nkx2_KO", "aging", "cetuximab", "dsRNA", "morphine"]
 _repo_url = "https://raw.githubusercontent.com/{owner}/scTenifold-data/master/{ds_name}"
-_repo_tree_url = (
-    "https://api.github.com/repos/{owner}/scTenifold-data/git/trees/main?recursive=1"
-)
+_repo_tree_url = "https://api.github.com/repos/{owner}/scTenifold-data/git/trees/main?recursive=1"
 
 
 __all__ = ["list_data", "fetch_data"]
@@ -36,8 +31,8 @@ def download_url(url, save_path, chunk_size=128):
             fd.write(chunk)
 
 
-def list_data(owner="qwerty239qwe", return_list=True) -> Union[dict, List[str]]:
-    """
+def list_data(owner="qwerty239qwe", return_list=True) -> dict | list[str]:
+    """List data.
 
     Parameters
     ----------
@@ -45,7 +40,8 @@ def list_data(owner="qwerty239qwe", return_list=True) -> Union[dict, List[str]]:
         owner name of dataset repo
     return_list: bool, default = True
         To return list of data name or return a dict indicating repo structure
-    Returns
+
+    Returns:
     -------
     data_info_tree: list or dict
         The obtainable data store in a dict, structure {'data_name': {'group': ['file_names']}}
@@ -76,7 +72,7 @@ def fetch_data(
     ds_name: str,
     dataset_path: Path = Path(__file__).parent.parent.parent / Path("datasets"),
     owner="qwerty239qwe",
-) -> Dict[str, pd.DataFrame]:
+) -> dict[str, pd.DataFrame]:
     if not dataset_path.is_dir():
         dataset_path.mkdir(parents=True)
     ds_dic = list_data(owner=owner, return_list=False)
@@ -97,9 +93,9 @@ def fetch_data(
                     save_path=(dataset_path / Path(f)),
                 )
         result_df[re.findall(r".*/(.*)", lv_1)[0]] = read_mtx(
-            mtx_file_name=str((dataset_path / Path(fn_names["matrix"]))),
-            gene_file_name=str((dataset_path / Path(fn_names["genes"]))),
-            barcode_file_name=str((dataset_path / Path(fn_names["barcodes"])))
+            mtx_file_name=str(dataset_path / Path(fn_names["matrix"])),
+            gene_file_name=str(dataset_path / Path(fn_names["genes"])),
+            barcode_file_name=str(dataset_path / Path(fn_names["barcodes"]))
             if fn_names["barcodes"] is not None
             else None,
         )  # optional

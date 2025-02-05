@@ -1,20 +1,20 @@
+import inspect
 import json
 import time
 from pathlib import Path
-from typing import Optional, Union
-import inspect
 
 import numpy as np
 import pandas as pd
 from scipy import sparse
 
-from scTenifold.core._networks import *
-from scTenifold.core._QC import sc_QC
-from scTenifold.core._norm import cpm_norm
-from scTenifold.core._decomposition import tensor_decomp
-from scTenifold.core._ko import reconstruct_pcnets
-from scTenifold.plotting import plot_hist
 from scTenifold.data import read_folder
+from scTenifold.plotting import plot_hist
+
+from ._decomposition import tensor_decomp
+from ._ko import reconstruct_pcnets
+from ._networks import d_regulation, make_networks, manifold_alignment, strict_direction
+from ._norm import cpm_norm
+from ._QC import sc_QC
 
 __all__ = ["scTenifoldNet", "scTenifoldKnk"]
 
@@ -34,8 +34,8 @@ class scBase:
         self.QC_dict = {}
         self.network_dict = {}
         self.tensor_dict = {}
-        self.manifold: Optional[pd.DataFrame] = None
-        self.d_regulation: Optional[pd.DataFrame] = None
+        self.manifold: pd.DataFrame | None = None
+        self.d_regulation: pd.DataFrame | None = None
         self.shared_gene_names = None
         self.qc_kws = {} if qc_kws is None else qc_kws
         self.nc_kws = {} if nc_kws is None else nc_kws
@@ -65,9 +65,7 @@ class scBase:
                     dic[d.stem] = []
                     nt = 0
                     while (d / Path(f"network_{nt}.npz")).exists():
-                        dic[d.stem].append(
-                            sparse.load_npz(d / Path(f"network_{nt}.npz"))
-                        )
+                        dic[d.stem].append(sparse.load_npz(d / Path(f"network_{nt}.npz")))
                         nt += 1
             obj_name = "network_dict"
         elif comp == "td":
@@ -90,12 +88,12 @@ class scBase:
     def load(cls, file_dir, **kwargs):
         parent_dir = Path(file_dir)
         kw_path = parent_dir / Path("kws.json")
-        with open(kw_path, "r") as f:
+        with open(kw_path) as f:
             kws = json.load(f)
         kwargs.update(kws)
         kwarg_props = {k: kwargs.pop(k) for k in cls.cls_prop if k in kwargs}
         ins = cls(**kwargs)
-        for name, obj in ins.step_comps.items():
+        for name, _obj in ins.step_comps.items():
             if (file_dir / Path(name)).exists():
                 dic, name = cls._load_comp(file_dir / Path(name), name)
                 setattr(ins, name, dic)
@@ -105,11 +103,7 @@ class scBase:
 
     @classmethod
     def list_kws(cls, step_name):
-        return {
-            n: p.default
-            for n, p in cls.kw_sigs[f"{step_name}"].parameters.items()
-            if p.default is not p.empty
-        }
+        return {n: p.default for n, p in cls.kw_sigs[f"{step_name}"].parameters.items() if p.default is not p.empty}
 
     @staticmethod
     def _infer_groups(*args):
@@ -132,10 +126,7 @@ class scBase:
     def _tensor_decomp(self, label, gene_names, **kwargs):
         self.tensor_dict[label] = tensor_decomp(
             np.concatenate(
-                [
-                    np.expand_dims(network.toarray(), -1)
-                    for network in self.network_dict[label]
-                ],
+                [np.expand_dims(network.toarray(), -1) for network in self.network_dict[label]],
                 axis=-1,
             ),
             gene_names,
@@ -153,9 +144,7 @@ class scBase:
             for label, obj in self.step_comps["nc"].items():
                 (file_dir / Path(f"{label}")).mkdir(parents=True, exist_ok=True)
                 for i, npx in enumerate(obj):
-                    file_name = file_dir / Path(f"{label}/network_{i}").with_suffix(
-                        ".npz"
-                    )
+                    file_name = file_dir / Path(f"{label}/network_{i}").with_suffix(".npz")
                     sparse.save_npz(file_name, npx)
                     if verbose:
                         print(f"{file_name.name} has been saved successfully.")
@@ -168,22 +157,17 @@ class scBase:
                     print(f"{label_fn.name} has been saved successfully.")
         elif comp in ["ma", "dr"]:
             if isinstance(self.step_comps[comp], pd.DataFrame):
-                fn = (
-                    file_dir
-                    / Path("manifold_alignment" if comp == "ma" else "d_regulation")
-                ).with_suffix(".csv")
+                fn = (file_dir / Path("manifold_alignment" if comp == "ma" else "d_regulation")).with_suffix(".csv")
                 self.step_comps[comp].to_csv(fn)
                 if verbose:
                     print(f"{fn.name} has been saved successfully.")
         else:
-            raise ValueError(
-                f"This step is not valid, please choose from {list(self.step_comps.keys())}"
-            )
+            raise ValueError(f"This step is not valid, please choose from {list(self.step_comps.keys())}")
 
     def save(
         self,
         file_dir: str,
-        comps: Union[str, list] = "all",
+        comps: str | list = "all",
         verbose: bool = True,
         **kwargs,
     ):
@@ -191,11 +175,7 @@ class scBase:
         dir_path.mkdir(parents=True, exist_ok=True)
 
         if comps == "all":
-            comps = [
-                k
-                for k, v in self.step_comps.items()
-                if v is not None or (isinstance(v, dict) and len(v) != 0)
-            ]
+            comps = [k for k, v in self.step_comps.items() if v is not None or (isinstance(v, dict) and len(v) != 0)]
         for c in comps:
             subdir = dir_path / Path(c)
             subdir.mkdir(parents=True, exist_ok=True)
@@ -207,9 +187,9 @@ class scBase:
             "ma_kws": self.ma_kws,
         }
         if hasattr(self, "ko_kws"):
-            configs.update({"ko_kws": getattr(self, "ko_kws")})
+            configs.update({"ko_kws": self.ko_kws})
         if hasattr(self, "dr_kws"):
-            configs.update({"dr_kws": getattr(self, "dr_kws")})
+            configs.update({"dr_kws": self.dr_kws})
         if self.shared_gene_names is not None:
             configs.update({"shared_gene_names": self.shared_gene_names})
         configs.update(kwargs)
@@ -230,7 +210,7 @@ class scTenifoldNet(scBase):
         ma_kws: dict = None,
         dr_kws: dict = None,
     ):
-        """
+        """ScTenifoldNet class.
 
         Parameters
         ----------
@@ -251,9 +231,7 @@ class scTenifoldNet(scBase):
         ma_kws: dict
             Keyword arguments of the manifold alignment step
         """
-        super().__init__(
-            qc_kws=qc_kws, nc_kws=nc_kws, td_kws=td_kws, ma_kws=ma_kws, dr_kws=dr_kws
-        )
+        super().__init__(qc_kws=qc_kws, nc_kws=nc_kws, td_kws=td_kws, ma_kws=ma_kws, dr_kws=dr_kws)
         self.x_label, self.y_label = x_label, y_label
         self.data_dict[x_label] = x_data
         self.data_dict[y_label] = y_data
@@ -266,7 +244,7 @@ class scTenifoldNet(scBase):
             "x_label": None,
             "y_label": None,
         }
-        for kw, sig in cls.kw_sigs.items():
+        for kw, _sig in cls.kw_sigs.items():
             config[kw] = cls.list_kws(kw)
         return config
 
@@ -277,21 +255,17 @@ class scTenifoldNet(scBase):
         if x_data_path.is_dir():
             x_data = read_folder(x_data_path)
         else:
-            x_data = pd.read_csv(
-                x_data_path, sep="\t" if x_data_path.suffix == ".tsv" else ","
-            )
+            x_data = pd.read_csv(x_data_path, sep="\t" if x_data_path.suffix == ".tsv" else ",")
         if y_data_path.is_dir():
             y_data = read_folder(y_data_path)
         else:
-            y_data = pd.read_csv(
-                y_data_path, sep="\t" if y_data_path.suffix == ".tsv" else ","
-            )
+            y_data = pd.read_csv(y_data_path, sep="\t" if y_data_path.suffix == ".tsv" else ",")
         return cls(x_data, y_data, **config)
 
     def save(
         self,
         file_dir: str,
-        comps: Union[str, list] = "all",
+        comps: str | list = "all",
         verbose: bool = True,
         **kwargs,
     ):
@@ -309,8 +283,7 @@ class scTenifoldNet(scBase):
         self.QC_dict[label] = cpm_norm(self.QC_dict[label])
 
     def run_step(self, step_name: str, **kwargs) -> None:
-        """
-        Run a single step of scTenifoldNet
+        """Run a single step of scTenifoldNet.
 
         Parameters
         ----------
@@ -324,7 +297,7 @@ class scTenifoldNet(scBase):
         **kwargs
             Keyword arguments for the step, if None then use stored kws in this object.
 
-        Returns
+        Returns:
         -------
         None
         """
@@ -347,18 +320,14 @@ class scTenifoldNet(scBase):
                     **(self.nc_kws if kwargs == {} else kwargs),
                 )
         elif step_name == "td":
-            for label, qc_data in self.QC_dict.items():
+            for label, _ in self.QC_dict.items():
                 self._tensor_decomp(
                     label,
                     self.shared_gene_names,
                     **(self.td_kws if kwargs == {} else kwargs),
                 )
-            self.tensor_dict[self.x_label] = (
-                self.tensor_dict[self.x_label] + self.tensor_dict[self.x_label].T
-            ) / 2
-            self.tensor_dict[self.y_label] = (
-                self.tensor_dict[self.y_label] + self.tensor_dict[self.y_label].T
-            ) / 2
+            self.tensor_dict[self.x_label] = (self.tensor_dict[self.x_label] + self.tensor_dict[self.x_label].T) / 2
+            self.tensor_dict[self.y_label] = (self.tensor_dict[self.y_label] + self.tensor_dict[self.y_label].T) / 2
         elif step_name == "ma":
             self.manifold = manifold_alignment(
                 self.tensor_dict[self.x_label],
@@ -367,24 +336,17 @@ class scTenifoldNet(scBase):
             )
             self.step_comps["ma"] = self.manifold
         elif step_name == "dr":
-            self.d_regulation = d_regulation(
-                self.manifold, **(self.dr_kws if kwargs == {} else kwargs)
-            )
+            self.d_regulation = d_regulation(self.manifold, **(self.dr_kws if kwargs == {} else kwargs))
             self.step_comps["dr"] = self.d_regulation
         else:
-            raise ValueError(
-                "This step name is not valid, please choose from qc, nc, td, ma, dr"
-            )
+            raise ValueError("This step name is not valid, please choose from qc, nc, td, ma, dr")
 
-        print(
-            f"process {step_name} finished in {time.perf_counter() - start_time} secs."
-        )
+        print(f"process {step_name} finished in {time.perf_counter() - start_time} secs.")
 
     def build(self) -> pd.DataFrame:
-        """
-        Run the whole pipeline of scTenifoldNet
+        """Run the whole pipeline of scTenifoldNet.
 
-        Returns
+        Returns:
         -------
         d_regulation_df: pd.DataFrame
             Differential regulation result dataframe
@@ -411,7 +373,7 @@ class scTenifoldKnk(scBase):
         dr_kws=None,
         ko_kws=None,
     ):
-        """
+        """ScTenifoldKnk class.
 
         Parameters
         ----------
@@ -435,9 +397,7 @@ class scTenifoldKnk(scBase):
             Keyword arguments of the Knock out step
         """
         ma_kws = {"d": 2} if ma_kws is None else ma_kws
-        super().__init__(
-            qc_kws=qc_kws, nc_kws=nc_kws, td_kws=td_kws, ma_kws=ma_kws, dr_kws=dr_kws
-        )
+        super().__init__(qc_kws=qc_kws, nc_kws=nc_kws, td_kws=td_kws, ma_kws=ma_kws, dr_kws=dr_kws)
         self.data_dict["WT"] = data
         self.strict_lambda = strict_lambda
         self.ko_genes = ko_genes if ko_genes is not None else []
@@ -452,7 +412,7 @@ class scTenifoldKnk(scBase):
             "ko_method": "default",
             "ko_genes": [],
         }
-        for kw, sig in cls.kw_sigs.items():
+        for kw, _sig in cls.kw_sigs.items():
             config[kw] = cls.list_kws(kw)
         return config
 
@@ -462,15 +422,13 @@ class scTenifoldKnk(scBase):
         if data_path.is_dir():
             data = read_folder(data_path)
         else:
-            data = pd.read_csv(
-                data_path, sep="\t" if data_path.suffix == ".tsv" else ","
-            )
+            data = pd.read_csv(data_path, sep="\t" if data_path.suffix == ".tsv" else ",")
         return cls(data, **config)
 
     def save(
         self,
         file_dir: str,
-        comps: Union[str, list] = "all",
+        comps: str | list = "all",
         verbose: bool = True,
         **kwargs,
     ):
@@ -498,16 +456,13 @@ class scTenifoldKnk(scBase):
                 **self.nc_kws,
             )
             self._tensor_decomp("KO", self.shared_gene_names, **self.td_kws)
-            self.tensor_dict["KO"] = strict_direction(
-                self.tensor_dict["KO"], self.strict_lambda
-            ).T
+            self.tensor_dict["KO"] = strict_direction(self.tensor_dict["KO"], self.strict_lambda).T
             np.fill_diagonal(self.tensor_dict["KO"].values, 0)
         else:
             ValueError("No such method")
 
     def run_step(self, step_name: str, **kwargs):
-        """
-        Run a single step of scTenifoldKnk
+        """Run a single step of scTenifoldKnk.
 
         Parameters
         ----------
@@ -522,7 +477,7 @@ class scTenifoldKnk(scBase):
         **kwargs
             Keyword arguments for the step, if None then use stored kws in this object.
 
-        Returns
+        Returns:
         -------
         None
         """
@@ -536,9 +491,7 @@ class scTenifoldKnk(scBase):
             # no norm
             print("finish QC: WT")
         elif step_name == "nc":
-            self._make_networks(
-                "WT", self.QC_dict["WT"], **(self.nc_kws if kwargs == {} else kwargs)
-            )
+            self._make_networks("WT", self.QC_dict["WT"], **(self.nc_kws if kwargs == {} else kwargs))
             self.shared_gene_names = self.QC_dict["WT"].index.to_list()
         elif step_name == "td":
             self._tensor_decomp(
@@ -546,9 +499,7 @@ class scTenifoldKnk(scBase):
                 self.shared_gene_names,
                 **(self.td_kws if kwargs == {} else kwargs),
             )
-            self.tensor_dict["WT"] = strict_direction(
-                self.tensor_dict["WT"], self.strict_lambda
-            ).T
+            self.tensor_dict["WT"] = strict_direction(self.tensor_dict["WT"], self.strict_lambda).T
         elif step_name == "ko":
             np.fill_diagonal(self.tensor_dict["WT"].values, 0)
             if kwargs.get("ko_genes") is not None:
@@ -566,21 +517,16 @@ class scTenifoldKnk(scBase):
             )
             self.step_comps["ma"] = self.manifold
         elif step_name == "dr":
-            self.d_regulation = d_regulation(
-                self.manifold, **(self.dr_kws if kwargs == {} else kwargs)
-            )
+            self.d_regulation = d_regulation(self.manifold, **(self.dr_kws if kwargs == {} else kwargs))
             self.step_comps["dr"] = self.d_regulation
         else:
             raise ValueError("No such step")
-        print(
-            f"process {step_name} finished in {time.perf_counter() - start_time} secs."
-        )
+        print(f"process {step_name} finished in {time.perf_counter() - start_time} secs.")
 
     def build(self):
-        """
-        Run the whole pipeline of scTenifoldKnk
+        """Run the whole pipeline of scTenifoldKnk.
 
-        Returns
+        Returns:
         -------
         d_regulation_df: pd.DataFrame
             Differential regulation result dataframe

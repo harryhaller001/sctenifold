@@ -1,10 +1,11 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
-from scTenifold.core._utils import timer
-from tensorly import decomposition
 import tensorly as tl
+from tensorly import decomposition
+
+from ._utils import timer
 
 __all__ = ["tensor_decomp"]
 
@@ -21,8 +22,7 @@ def tensor_decomp(
     random_state: int = 42,
     **kwargs,
 ) -> pd.DataFrame:
-    """
-    Perform tensor decomposition on pc networks
+    """Perform tensor decomposition on pc networks.
 
     Parameters
     ----------
@@ -46,12 +46,12 @@ def tensor_decomp(
     **kwargs:
         Keyword arguments used in the decomposition function
 
-    Returns
+    Returns:
     -------
     tensor_decomp_df: pd.DataFrame
         The result of tensor decomposition, expected shape = (n_genes, n_genes)
 
-    References
+    References:
     ----------
     http://tensorly.org/stable/modules/api.html#module-tensorly.decomposition
 

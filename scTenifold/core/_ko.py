@@ -1,10 +1,8 @@
-from typing import List
-
 import numpy as np
 import pandas as pd
 from scipy.sparse import coo_matrix
 
-from scTenifold.core._networks import make_networks
+from ._networks import make_networks
 
 
 def ko_propagation(B, x, ko_gene_id, degree: int) -> np.ndarray:
@@ -28,7 +26,7 @@ def ko_propagation(B, x, ko_gene_id, degree: int) -> np.ndarray:
     return np.where(x_ko >= 0, x_ko, 0)
 
 
-def reconstruct_pcnets(nets: List[coo_matrix], X_df, ko_gene_id, degree, **kwargs):
+def reconstruct_pcnets(nets: list[coo_matrix], X_df, ko_gene_id, degree, **kwargs):
     ko_nets = []
     for net in nets:
         data = ko_propagation(net.toarray(), X_df.values, ko_gene_id, degree)

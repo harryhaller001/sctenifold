@@ -1,9 +1,10 @@
-import pandas as pd
-import numpy as np
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
+from scTenifold import scTenifoldKnk, scTenifoldNet
 from scTenifold.data import get_test_df
-from scTenifold import scTenifoldNet, scTenifoldKnk
 
 
 def test_scTenifoldNet():
@@ -11,9 +12,7 @@ def test_scTenifoldNet():
         get_test_df(n_cells=100, n_genes=100),
         get_test_df(n_cells=100, n_genes=100),
     )
-    sc = scTenifoldNet(
-        df_1, df_2, "X", "Y", qc_kws={"min_lib_size": 1}, nc_kws={"n_cpus": 1}
-    )
+    sc = scTenifoldNet(df_1, df_2, "X", "Y", qc_kws={"min_lib_size": 1}, nc_kws={"n_cpus": 1})
     result = sc.build()
     print(result)
     assert isinstance(result, pd.DataFrame)

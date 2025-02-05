@@ -1,15 +1,16 @@
+from enum import Enum
+
+import pandas as pd
+import umap
 from sklearn.decomposition import PCA
 from sklearn.manifold import (
+    MDS,
     TSNE,
     Isomap,
-    MDS,
-    SpectralEmbedding,
     LocallyLinearEmbedding,
+    SpectralEmbedding,
 )
-import umap
 from sklearn.preprocessing import StandardScaler
-import pandas as pd
-from enum import Enum
 
 __all__ = ["prepare_PCA_dfs", "prepare_embedding_dfs"]
 
@@ -33,9 +34,7 @@ REDUCER_DICT = {
 }
 
 
-def prepare_PCA_dfs(
-    feature_df, transform_func=None, n_components=None, standardize=True
-):
+def prepare_PCA_dfs(feature_df, transform_func=None, n_components=None, standardize=True):
     if transform_func is not None:
         x = transform_func(feature_df)
     else:
@@ -78,15 +77,10 @@ def prepare_embedding_dfs(
         reducer = Reducer(reducer)
     sample_names = feature_df.columns.to_list()
     x = StandardScaler().fit_transform(x.T) if standardize else x.values.T
-    X_embedded = REDUCER_DICT[reducer](
-        n_components=n_components, **kwargs
-    ).fit_transform(x)
+    X_embedded = REDUCER_DICT[reducer](n_components=n_components, **kwargs).fit_transform(x)
     df = pd.DataFrame(
         X_embedded,
-        columns=[
-            "{reducer} {i}".format(reducer=reducer.value, i=i)
-            for i in range(1, n_components + 1)
-        ],
+        columns=[f"{reducer.value} {i}" for i in range(1, n_components + 1)],
         index=sample_names,
     )
     return df

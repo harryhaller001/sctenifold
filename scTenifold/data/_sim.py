@@ -1,8 +1,9 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Optional, Sequence
 
 import numpy as np
 import pandas as pd
+
 # from anndata import AnnData
 
 
@@ -13,8 +14,7 @@ DEFAULT_NEG = ["IL2", "TNF"]
 
 
 def get_test_df(n_cells: int = 100, n_genes: int = 1000, random_state: int = None):
-    """
-    Function to generate test dataframe
+    """Function to generate test dataframe.
 
     Parameters
     ----------
@@ -25,7 +25,7 @@ def get_test_df(n_cells: int = 100, n_genes: int = 1000, random_state: int = Non
     random_state: default = None
         Random seed of generated data, used the same seed to reproduce the same dataset
 
-    Returns
+    Returns:
     -------
     test_df: pd.DataFrame
         testing data
@@ -35,10 +35,8 @@ def get_test_df(n_cells: int = 100, n_genes: int = 1000, random_state: int = Non
         .negative_binomial(20, 0.98, n_cells * n_genes)
         .reshape(n_genes, n_cells)
     )
-    pseudo_gene_names = ["MT-{}".format(i) for i in range(1, 11)] + [
-        "NG-{}".format(i) for i in range(1, n_genes - 9)
-    ]
-    pseudo_cell_names = ["Cell-{}".format(i) for i in range(1, n_cells + 1)]
+    pseudo_gene_names = [f"MT-{i}" for i in range(1, 11)] + [f"NG-{i}" for i in range(1, n_genes - 9)]
+    pseudo_cell_names = [f"Cell-{i}" for i in range(1, n_cells + 1)]
     return pd.DataFrame(data, index=pseudo_gene_names, columns=pseudo_cell_names)
 
 
@@ -48,8 +46,7 @@ def _normalize(data):
 
 @dataclass
 class TestDataGenerator:
-    """
-    A test data generator produces test data for cell scoring functions
+    """A test data generator produces test data for cell scoring functions.
 
     Parameters
     ----------
@@ -66,15 +63,14 @@ class TestDataGenerator:
     n_bins: int, default = 25
     n_ctrl: int, default = 50
     random_state: int, default = 42
-
     """
 
     n_genes: int = 1000
     n_samples: int = 100
     pos_eff_ratio: float = 0.3
     neg_eff_ratio: float = 0
-    target_pos: Optional[Sequence[str]] = None
-    target_neg: Optional[Sequence[str]] = None
+    target_pos: Sequence[str] | None = None
+    target_neg: Sequence[str] | None = None
     n_bins: int = 25
     n_ctrl: int = 50
     random_state: int = 42
@@ -86,18 +82,11 @@ class TestDataGenerator:
             self.target_pos = DEFAULT_POS
         if self.target_neg is None:
             self.target_neg = []
-        self.X = random_state.negative_binomial(
-            20, 0.9, size=(self.n_genes, self.n_samples)
-        )
+        self.X = random_state.negative_binomial(20, 0.9, size=(self.n_genes, self.n_samples))
         self._add_eff(random_state)
 
         self.gene_list = (
-            [
-                f"pseudo_G{i}"
-                for i in range(
-                    self.n_genes - len(self.target_pos) - len(self.target_neg)
-                )
-            ]
+            [f"pseudo_G{i}" for i in range(self.n_genes - len(self.target_pos) - len(self.target_neg))]
             + self.target_pos
             + self.target_neg
         )
@@ -107,15 +96,11 @@ class TestDataGenerator:
     def _add_eff(self, random_state):
         pos_eff_size = int(self.n_samples * self.pos_eff_ratio)
         neg_eff_size = int(self.n_samples * self.neg_eff_ratio)
-        effect = np.zeros(
-            shape=(self.n_genes, pos_eff_size + neg_eff_size), dtype=np.int32
-        )
+        effect = np.zeros(shape=(self.n_genes, pos_eff_size + neg_eff_size), dtype=np.int32)
         effect[
             -len(self.target_pos) - len(self.target_neg) : -len(self.target_neg),
             :pos_eff_size,
-        ] = random_state.negative_binomial(
-            20, 0.5, size=(len(self.target_pos), pos_eff_size)
-        )
+        ] = random_state.negative_binomial(20, 0.5, size=(len(self.target_pos), pos_eff_size))
         effect[-len(self.target_neg) :, pos_eff_size:] = random_state.negative_binomial(
             20, 0.5, size=(len(self.target_neg), neg_eff_size)
         )

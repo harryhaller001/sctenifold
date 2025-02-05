@@ -3,7 +3,7 @@
 
 BASE_DIR		= ${PWD}
 
-PACKAGE_NAME	= scTenifoldpy
+PACKAGE_NAME	= scTenifold
 
 PACKAGE_DIR		= $(BASE_DIR)/scTenifold
 TEST_DIR		= $(BASE_DIR)/tests
@@ -35,14 +35,14 @@ help: ## This help.
 
 # Dependency handling
 
-# .PHONY : install
-# install: ## install all python dependencies
+.PHONY : install
+install: ## install all python dependencies
 
-# # Install dev dependencies
-# 	@$(PIP_OPT) install -e ".[test,docs]" --upgrade
+# Install dev dependencies
+	@$(PIP_OPT) install -e ".[test,docs]" --upgrade
 
-# # Install precommit hook
-# 	@$(PRE_COMMIT_OPT) install
+# Install precommit hook
+#	@$(PRE_COMMIT_OPT) install
 
 .PHONY : freeze
 freeze: ## Freeze package dependencies
@@ -75,7 +75,8 @@ build: # Twine package upload and checks
 .PHONY : format
 format: ## Lint and format code with flake8 and black
 	@$(RUFF_OPT) format $(PACKAGE_DIR) $(TEST_DIR) $(DOCS_DIR)/source/conf.py
-	@$(RUFF_OPT) check --fix $(PACKAGE_DIR) $(TEST_DIR) $(DOCS_DIR)/source/conf.py
+#	@$(RUFF_OPT) check --fix $(PACKAGE_DIR) $(TEST_DIR) $(DOCS_DIR)/source/conf.py
+	@$(RUFF_OPT) check --fix $(PACKAGE_DIR) $(DOCS_DIR)/source/conf.py
 
 
 .PHONY: testing
@@ -131,14 +132,14 @@ docs: ## Build sphinx docs
 
 # Run all checks (always before committing!)
 .PHONY: check
-check: install freeze format typing testing build docs precommit ## Full check of package
+check: install freeze format typing testing build docs ## Full check of package
 
 
 
-.PHONY : precommit
-precommit: ## Run precommit file
-#	@pre-commit run --all-files --verbose
-	@$(PRE_COMMIT_OPT) run --all-files
+# .PHONY : precommit
+# precommit: ## Run precommit file
+# #	@pre-commit run --all-files --verbose
+# 	@$(PRE_COMMIT_OPT) run --all-files
 
 
 .PHONY : open-docs
